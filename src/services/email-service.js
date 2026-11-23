@@ -20,7 +20,7 @@ const sendEmail = async (mailFrom, mailTo, mailSubject, mailBody) => {
 
 const updateTicket = async(id, data) => {
   try {
-    const response = await repo.update({ id, data });
+    const response = await repo.update(id, data);
     return response;
   } catch (error) {
     console.error('Error updating ticket:', error);
@@ -43,11 +43,14 @@ const createNotification = async(data) => {
     const response = await repo.create(data);
     return response;
   } catch (error) {
-    
+    console.error('Error creating notification:', error);
+    throw error;
   }
 }
 
 module.exports = {
     sendEmail,
-    createNotification
+    createNotification,
+    fetchPendingEmails,
+    updateTicket
 };
