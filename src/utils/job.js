@@ -1,25 +1,27 @@
-const cron = require("'node-cron")
-const emailService = require("../services/email-service")
-const sender = require('../config/emailConfig');
+const cron = require('node-cron');
+const emailService = require('../services/email-service');
+const { EMAIL_ID } = require('../config/serverConfig');
 
 const setupJobs = () =>{
-    cron.schedule('*/5 * * * *', ()=>{
-      const response = await emailService.fetchPendingEmails();
-      response.forEach((email) =>{
-        sender.sendEmail({
-          from: "RemainderService@airline.com",
-          to: email.recepientEmail,
-          subject: email.subject,
-          text: email.content
-        }, (error, info) => {
-            if (error) {
-                console.error('Error sending email:', error);
+    cron.schedule('*/5 * * * *', async ()=>{
+      try {
+        const pendingEmails = await emailService.fetchPendingEmails();
+        for (const email of pendingEmails) {
+          try {
+            await emailService.sendEmail(EMAIL_ID, email.recepientEmail, email.subject, email.content);
+            await emailService.updateTicket(email.id, { status: 'SUCCESS' });
+          } catch (error) {
+            console.error('Error sending email:', error);
+            try {
+              await emailService.updateTicket(email.id, { status: 'FAILED' });
+            } catch (updateError) {
+              console.error('Error marking ticket as FAILED:', updateError);
             }
-            else {
-                console.log('Email sent:', info.response);
-            }
-        });
-      })
+          }
+        }
+      } catch (error) {
+        console.error('Error in reminder job:', error);
+      }
     });
 }
 
